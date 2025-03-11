@@ -20,7 +20,7 @@ days_interval = 729  # Exemple d'intervalle de 730 jours
 start_date, end_date = adjust_dates(days_interval)
 
 # Charger la liste des tickers depuis le fichier
-with open("cac40_tickers.txt", "r") as f:
+with open("Data/ticker/cac40_tickers.txt", "r") as f:
     tickers = [line.strip() for line in f.readlines()]
 
 interval = "1h"  # Données horaires
@@ -30,6 +30,6 @@ data = yf.download(tickers, start=start_date, end=end_date, interval=interval,pr
 
 
 # Sauvegarder les données sous format CSV
-data.to_csv("cac40_stock_data.csv")
+data.to_csv("Data/cac40_stock_data.csv")
 
 print(f" Données du CAC 40 récupérées entre {start_date} et {end_date} et enregistrées dans 'cac40_stock_data.csv'.")
