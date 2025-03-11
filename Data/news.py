@@ -31,6 +31,6 @@ for ticker in tickers:
     df = pd.concat([df, news], ignore_index=True)
 # Sauvegarder les données sous format CSV
 df.drop(columns=['thumbnail','relatedTickers'],inplace=True)
-df.to_csv("Data/cac40_news.csv")
+df.to_csv("data/cac40_news.csv")
 
 print(f" Données du CAC 40 récupérées entre {start_date} et {end_date} et enregistrées dans 'cac40_stock_data.csv'.")
