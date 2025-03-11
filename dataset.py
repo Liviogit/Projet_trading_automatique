@@ -14,7 +14,7 @@ def adjust_dates(days_interval):
     return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
 
 # Nombre de jours que tu veux dans l'intervalle
-days_interval = 729  # Exemple d'intervalle de 30 jours
+days_interval = 729  # Exemple d'intervalle de 730 jours
 
 # Ajustement des dates
 start_date, end_date = adjust_dates(days_interval)
@@ -26,7 +26,8 @@ with open("cac40_tickers.txt", "r") as f:
 interval = "1h"  # Données horaires
 
 # Télécharger les données avec yfinance pour l'intervalle spécifié
-data = yf.download(tickers, start=start_date, end=end_date, interval=interval, group_by="ticker",multi_level_index=False)
+data = yf.download(tickers, start=start_date, end=end_date, interval=interval,prepost=True,multi_level_index=True)
+
 
 # Sauvegarder les données sous format CSV
 data.to_csv("cac40_stock_data.csv")

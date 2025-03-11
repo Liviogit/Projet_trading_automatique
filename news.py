@@ -29,8 +29,8 @@ for ticker in tickers:
     news = yf.Search(ticker, news_count=20).news
     news=pd.DataFrame(news)
     df = pd.concat([df, news], ignore_index=True)
-print(df.head())
 # Sauvegarder les données sous format CSV
+df.drop(columns=['thumbnail','relatedTickers'],inplace=True)
 df.to_csv("cac40_news.csv")
 
 print(f" Données du CAC 40 récupérées entre {start_date} et {end_date} et enregistrées dans 'cac40_stock_data.csv'.")
