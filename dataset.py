@@ -31,4 +31,4 @@ data = yf.download(tickers, start=start_date, end=end_date, interval=interval, g
 # Sauvegarder les données sous format CSV
 data.to_csv("cac40_stock_data.csv")
 
-print(f"✅ Données du CAC 40 récupérées entre {start_date} et {end_date} et enregistrées dans 'cac40_stock_data.csv'.")
+print(f" Données du CAC 40 récupérées entre {start_date} et {end_date} et enregistrées dans 'cac40_stock_data.csv'.")
