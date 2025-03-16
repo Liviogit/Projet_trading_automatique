@@ -1,0 +1,7 @@
+numpy
+scikit-learn
+stable-baselines3
+gym
+torch
+matplotlib
+seaborn
