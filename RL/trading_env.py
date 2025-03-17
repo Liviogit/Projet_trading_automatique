@@ -25,13 +25,17 @@ class TradingEnv(gym.Env):
         self.shares_held = 0
         self.total_value = initial_balance
     
-    def reset(self):
+    def reset(self, seed=None, **kwargs):
         """Réinitialise l'environnement pour un nouvel épisode"""
+        super().reset(seed=seed)  # Compatibilité avec Gymnasium
         self.current_step = 0
         self.balance = self.initial_balance
         self.shares_held = 0
         self.total_value = self.initial_balance
-        return self._next_observation()
+        return self._next_observation(), {}  # Ajout du second élément attendu
+
+
+
     
     def _next_observation(self):
         """Renvoie l'état actuel du marché"""
@@ -42,27 +46,53 @@ class TradingEnv(gym.Env):
         """Applique une action (Buy, Sell, Hold) et retourne le nouvel état"""
         prev_value = self.total_value
         current_price = self.data.iloc[self.current_step]["Close"]
-        
-        # Gestion des actions
-        if action == 1 and self.balance >= current_price:
+
+        # 📊 Historique des valeurs du portefeuille pour calculer la volatilité
+        if not hasattr(self, "portfolio_history"):
+            self.portfolio_history = [self.initial_balance]
+
+        # 📌 Gestion des actions (Buy, Sell, Hold)
+        if action == 1 and self.balance >= current_price:  # Acheter
             self.shares_held += 1
             self.balance -= current_price
-        elif action == 2 and self.shares_held > 0:
+        elif action == 2 and self.shares_held > 0:  # Vendre
             self.shares_held -= 1
             self.balance += current_price
 
-        # Mettre à jour la valeur totale du portefeuille
+        # 💰 Mettre à jour la valeur totale du portefeuille
         self.total_value = self.balance + (self.shares_held * current_price)
-        
-        # Calculer la récompense (profit ou perte)
+        self.portfolio_history.append(self.total_value)
+
+        # 📈 Calcul du profit/perte instantané
         reward = self.total_value - prev_value
+
+        # 🔥 🔥 🔥 Améliorations 🔥 🔥 🔥
         
-        # Vérifier si l'épisode est terminé
+        # 1️⃣ 🔹 Ratio de Sharpe (rendement ajusté au risque)
+        returns = np.diff(self.portfolio_history) / np.array(self.portfolio_history[:-1])  # Rendements quotidiens
+        if len(returns) > 1:
+            sharpe_ratio = np.mean(returns) / (np.std(returns) + 1e-6)  # Éviter la division par 0
+            reward += sharpe_ratio * 10  # Pondération pour encourager un bon Sharpe Ratio
+
+        # 2️⃣ 🔻 Pénaliser le Drawdown (baisse maximale du capital)
+        max_drawdown = min(self.portfolio_history) / max(self.portfolio_history) - 1
+        reward += max_drawdown * 10  # Récompense négative si drawdown élevé
+
+        # 3️⃣ 🚫 Pénalité sur les transactions excessives (éviter le sur-trading)
+        if action in [1, 2]:  # Si achat ou vente
+            reward -= 0.1  # Petite pénalité
+
+        # 🏁 Vérifier si l'épisode est terminé
         self.current_step += 1
         done = self.current_step >= len(self.data) - 1
 
         return self._next_observation(), reward, done, {}
 
+
     def render(self, mode='human'):
         """Affiche l'état actuel du trading"""
         print(f'Step: {self.current_step}, Balance: {self.balance:.2f}, Shares: {self.shares_held}, Total Value: {self.total_value:.2f}')
+
+    def seed(self, seed=None):
+        """Définit la graine aléatoire pour la reproductibilité."""
+        np.random.seed(seed)
