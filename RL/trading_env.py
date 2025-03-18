@@ -3,9 +3,19 @@ from gym import spaces
 import numpy as np
 import pandas as pd
 
+def compute_rsi(series, period=14):
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+
+    # ✅ Évite la division par zéro
+    rs = gain / (loss + 1e-6)
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi.fillna(rsi.mean())  # Remplace les NaN initiaux
+
+
 class TradingEnv(gym.Env):
-    """Environnement de trading basé sur OpenAI Gym"""
-    
     def __init__(self, data, ticker='AC.PA', initial_balance=10000):
         super(TradingEnv, self).__init__()
 
@@ -13,86 +23,104 @@ class TradingEnv(gym.Env):
         self.data = data[data['Ticker'] == ticker].reset_index(drop=True)
         self.initial_balance = initial_balance
         self.current_step = 0
-        
+
         # Définition de l'espace d'action : 0=Hold, 1=Buy, 2=Sell
         self.action_space = spaces.Discrete(3)
-        
-        # Définition de l'espace d'observation : Open, High, Low, Close, Volume
-        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(5,), dtype=np.float32)
+
+        # Définition de l'espace d'observation : Open, High, Low, Close, Volume, RSI
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(6,), dtype=np.float32)
+
+        # ✅ Initialiser l'historique du portefeuille
+        self.portfolio_history = [self.initial_balance]
 
         # Variables du portefeuille
         self.balance = initial_balance
         self.shares_held = 0
         self.total_value = initial_balance
-    
+        self.max_drawdown = initial_balance  # Ajout pour gérer le drawdown
+
     def reset(self, seed=None, **kwargs):
-        """Réinitialise l'environnement pour un nouvel épisode"""
-        super().reset(seed=seed)  # Compatibilité avec Gymnasium
+        """Réinitialise l’environnement pour un nouvel épisode"""
+        super().reset(seed=seed)
+        
+        # ✅ Affichage final des résultats avant la réinitialisation
+        if self.current_step > 0:
+            print(f"\n✅ Fin de l'entraînement !")
+            print(f"📊 Balance finale: {self.balance:.2f}")
+            print(f"📈 Actions détenues: {self.shares_held}")
+            print(f"💰 Valeur totale du portefeuille: {self.total_value:.2f}\n")
+
         self.current_step = 0
         self.balance = self.initial_balance
         self.shares_held = 0
         self.total_value = self.initial_balance
-        return self._next_observation(), {}  # Ajout du second élément attendu
-
-
-
+        return self._next_observation(), {}
     
     def _next_observation(self):
-        """Renvoie l'état actuel du marché"""
         obs = self.data.iloc[self.current_step][["Open", "High", "Low", "Close", "Volume"]].values
-        return np.array(obs, dtype=np.float32)
-    
+        
+        # Ajoute RSI
+        rsi = compute_rsi(self.data["Close"], 14).iloc[self.current_step]
+
+        # Construit l'observation
+        observation = np.array([*obs, rsi], dtype=np.float32)
+
+        return observation
+
+    def compute_reward(self):
+        """
+        Calcule la récompense en fonction du profit, du drawdown et du Sharpe Ratio.
+        """
+        profit = self.total_value - self.initial_balance
+
+        # Pénalisation du drawdown
+        drawdown_penalty = -0.1 * max(0, self.max_drawdown - self.total_value)
+
+        # Ajout du ratio de Sharpe
+        returns = np.diff(self.portfolio_history) / np.array(self.portfolio_history[:-1])
+        sharpe_ratio = np.mean(returns) / (np.std(returns) + 1e-6) if len(returns) > 1 else 0
+
+        reward = profit + drawdown_penalty + sharpe_ratio * 10
+
+        return reward
+
     def step(self, action):
         """Applique une action (Buy, Sell, Hold) et retourne le nouvel état"""
         prev_value = self.total_value
         current_price = self.data.iloc[self.current_step]["Close"]
 
-        # 📊 Historique des valeurs du portefeuille pour calculer la volatilité
-        if not hasattr(self, "portfolio_history"):
-            self.portfolio_history = [self.initial_balance]
-
-        # 📌 Gestion des actions (Buy, Sell, Hold)
-        if action == 1 and self.balance >= current_price:  # Acheter
+        if action == 1 and self.balance >= current_price:
             self.shares_held += 1
             self.balance -= current_price
-        elif action == 2 and self.shares_held > 0:  # Vendre
+        elif action == 2 and self.shares_held > 0:
             self.shares_held -= 1
             self.balance += current_price
 
-        # 💰 Mettre à jour la valeur totale du portefeuille
+        # Mise à jour de la valeur totale du portefeuille
         self.total_value = self.balance + (self.shares_held * current_price)
         self.portfolio_history.append(self.total_value)
 
-        # 📈 Calcul du profit/perte instantané
-        reward = self.total_value - prev_value
+        # Mise à jour du drawdown max
+        self.max_drawdown = max(self.max_drawdown, self.total_value)
 
-        # 🔥 🔥 🔥 Améliorations 🔥 🔥 🔥
-        
-        # 1️⃣ 🔹 Ratio de Sharpe (rendement ajusté au risque)
-        returns = np.diff(self.portfolio_history) / np.array(self.portfolio_history[:-1])  # Rendements quotidiens
-        if len(returns) > 1:
-            sharpe_ratio = np.mean(returns) / (np.std(returns) + 1e-6)  # Éviter la division par 0
-            reward += sharpe_ratio * 10  # Pondération pour encourager un bon Sharpe Ratio
+        # Calcul de la récompense avec la nouvelle fonction
+        reward = self.compute_reward()
 
-        # 2️⃣ 🔻 Pénaliser le Drawdown (baisse maximale du capital)
-        max_drawdown = min(self.portfolio_history) / max(self.portfolio_history) - 1
-        reward += max_drawdown * 10  # Récompense négative si drawdown élevé
+        # ✅ Ajout d'une sécurité contre les NaN
+        if np.isnan(reward):
+            print(f"❌ NaN détecté dans reward ! prev_value={prev_value}, total_value={self.total_value}")
+            reward = 0  
 
-        # 3️⃣ 🚫 Pénalité sur les transactions excessives (éviter le sur-trading)
-        if action in [1, 2]:  # Si achat ou vente
-            reward -= 0.1  # Petite pénalité
-
-        # 🏁 Vérifier si l'épisode est terminé
         self.current_step += 1
-        done = self.current_step >= len(self.data) - 1
+        terminated = self.current_step >= len(self.data) - 1
+        truncated = False  
 
-        return self._next_observation(), reward, done, {}
+
+        return self._next_observation(), reward, terminated, truncated, {}
 
 
     def render(self, mode='human'):
-        """Affiche l'état actuel du trading"""
         print(f'Step: {self.current_step}, Balance: {self.balance:.2f}, Shares: {self.shares_held}, Total Value: {self.total_value:.2f}')
 
     def seed(self, seed=None):
-        """Définit la graine aléatoire pour la reproductibilité."""
         np.random.seed(seed)

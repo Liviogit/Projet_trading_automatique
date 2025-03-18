@@ -40,9 +40,11 @@ total_reward = 0
 
 print("\n🎬 Début du test PPO...\n")
 
-for step in range(1000):  # On teste seulement 10 étapes pour voir le comportement
+for step in range(100):  # On teste seulement 10 étapes pour voir le comportement
     action, _ = model.predict(obs, deterministic=True)  # Choix d'une action
-    obs, reward, done, _ = env.step(action)  # ✅ Correction : attend 4 valeurs
+    obs, reward, terminated, truncated, _ = env.step(action)  # ✅ Correction
+    done = terminated or truncated  # ✅ Fusion des flags pour compatibilité
+
 
     total_reward += reward
 
