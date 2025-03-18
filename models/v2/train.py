@@ -1,1 +1,0 @@
-"# Script d'entraånement du modäle v2" 
