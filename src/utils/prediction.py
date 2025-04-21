@@ -18,4 +18,4 @@ def get_prediction(FilePathinput, FilePathoutput,days_interval=729):
     y_pred= model.predict(df_latest[["O", "H", "L", "C", "V", "SMA_10", "SMA_50", "RSI_14", "MACD", "MACD_Signal"]])
     df_latest["Prediction"] = y_pred
     df_latest=df_latest[["Ticker","Prediction"]]
-    return df_latest
+    return df_latest,latest_date

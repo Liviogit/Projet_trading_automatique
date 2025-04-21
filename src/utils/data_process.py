@@ -26,19 +26,11 @@ def clean_data(FilePath):
     # Charger le fichier CSV avec l'index 'Datetime'
     df = pd.read_csv(FilePath, header=[0, 1], index_col=0)
 
-    # Vérifier les premières lignes du DataFrame
-    print("Avant transformation:")
-    print(df.head())
-
     # Réorganiser les données en format long en utilisant 'stack()' sur les colonnes multi-index
     df_long = df.stack(level=['Price', 'Ticker']).reset_index()
 
     # Renommer les colonnes pour plus de clarté
     df_long.columns = ['Datetime', 'Price', 'Ticker', 'Value']
-
-    # Vérifier les premières lignes après transformation
-    print("\nAprès transformation en format long:")
-    print(df_long.head())
 
     # Sauvegarder le DataFrame transformé si nécessaire
     df_long.to_csv(FilePath, index=False)
@@ -59,7 +51,6 @@ def get_data(FilePathinput, FilePathoutput,days_interval=60):
     # Sauvegarder les données sous format CSV
     data.to_csv(FilePathoutput)
     clean_data(FilePathoutput)
-    print(f" Données du CAC 40 récupérées entre {start_date} et {end_date} et enregistrées dans {FilePathoutput}")
     return None
 
 def Xgb_process(FilePathinput):
@@ -89,3 +80,9 @@ def Xgb_process(FilePathinput):
     df["Return_1h"] = df.groupby("Ticker")["C"].pct_change(1).shift(-1)  # Variation future du prix
     df["Ticker"]=df["Ticker"].astype("category")
     return df
+
+def get_portfolio():
+    with open("Data/Tickers/txt/portefeuille.txt", "r", encoding="utf-8") as f:
+        contenu = f.read()
+        contenu = contenu.splitlines()
+    return contenu
