@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from trading_env import TradingEnv
+from RL.RL1.trading_env import TradingEnv
 
 
 # Charger un DataFrame de test (avec des données factices)

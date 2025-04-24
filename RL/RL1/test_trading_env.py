@@ -1,5 +1,5 @@
 import pandas as pd
-from trading_env import TradingEnv  # Assure-toi que `trading_env.py` est dans le même dossier
+from RL.RL1.trading_env import TradingEnv  # Assure-toi que `trading_env.py` est dans le même dossier
 
 # 📂 Charger les données du fichier CAC40
 file_path = "/Users/yassinf/GIT/Projet_trading_automatique/Data/cac40_clean_format.csv"  # Mets le chemin correct si besoin

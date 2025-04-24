@@ -3,7 +3,7 @@ import numpy as np
 import ta  # Librairie pour les indicateurs techniques
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
-from trading_env import TradingEnv  # Assurez-vous que ce fichier est bien défini
+from RL.RL1.trading_env import TradingEnv  # Assurez-vous que ce fichier est bien défini
 
 # 📂 Charger les données du CAC40
 file_path = "/Users/yassinf/GIT/Projet_trading_automatique/Data/cac40_clean_format.csv"

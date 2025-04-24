@@ -2,7 +2,7 @@ import gymnasium as gym  # ✅ Correction pour compatibilité avec Gymnasium
 import pandas as pd
 import numpy as np
 from stable_baselines3 import PPO
-from trading_env import TradingEnv  # ✅ Vérifie que le fichier `trading_env.py` est bien accessible
+from RL.RL1.trading_env import TradingEnv  # ✅ Vérifie que le fichier `trading_env.py` est bien accessible
 
 # 📂 Charger les données du CAC40
 file_path = "/Users/yassinf/GIT/Projet_trading_automatique/Data/cac40_clean_format.csv"  # ✅ Vérifie que le chemin est correct

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from stable_baselines3 import PPO
-from trading_env import TradingEnv  # Assure-toi que ton TradingEnv est bien importé
+from RL.RL1.trading_env import TradingEnv  # Assure-toi que ton TradingEnv est bien importé
 
 # 📂 Charger les nouvelles données pour le backtest (BNP.PA)
 file_path = "/Users/yassinf/GIT/Projet_trading_automatique/Data/cac40_clean_format.csv"
