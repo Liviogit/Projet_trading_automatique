@@ -95,6 +95,25 @@ def get_prediction(FilePathinput, FilePathoutput, days_interval=729):
 
     df_latest = data[data["Datetime"] == latest_date].reset_index(drop=True)
 
+    # --- Ajout Dernier Prix & Variation J-1 ---
+    df_latest['Dernier_Prix'] = None
+    df_latest['Var_J1_Pct'] = None
+    for idx, row in df_latest.iterrows():
+        ticker = row['Ticker']
+        # Cherche la colonne du prix de clôture
+        price_col = 'C' if 'C' in data.columns else ('Close' if 'Close' in data.columns else None)
+        if price_col is not None:
+            ticker_data = data[data['Ticker'] == ticker].sort_values('Datetime')
+            last_row = ticker_data[ticker_data['Datetime'] == latest_date]
+            prev_row = ticker_data[ticker_data['Datetime'] < latest_date].tail(1)
+            if not last_row.empty:
+                last_price = last_row[price_col].values[0]
+                df_latest.at[idx, 'Dernier_Prix'] = last_price
+                if not prev_row.empty:
+                    prev_price = prev_row[price_col].values[0]
+                    var_j1 = ((last_price / prev_price) - 1) * 100 if prev_price != 0 else None
+                    df_latest.at[idx, 'Var_J1_Pct'] = var_j1
+
     if df_latest.empty:
          print("No data found for the latest date. Cannot make XGBoost prediction.")
          tickers = get_tickers(FilePathinput)
@@ -131,7 +150,7 @@ def get_prediction(FilePathinput, FilePathoutput, days_interval=729):
         df_latest["Confidence"] = None
 
     # 6. Format and Return Result
-    df_final = df_latest[["Ticker", "Prediction", "Confidence"]].copy()
+    df_final = df_latest[["Ticker", "Prediction", "Confidence", "Dernier_Prix", "Var_J1_Pct"]].copy()
 
     print("--- XGBoost Prediction Finished ---")
     return df_final, latest_date_str
@@ -342,6 +361,21 @@ def get_lstm_prediction(FilePathinput, FilePathoutput,
             results.append(ticker_result)
             continue
         # Expected sequence shape: (time_steps, n_features)
+
+        # --- Ajout Dernier Prix & Variation J-1 ---
+        price_col = 'Close' if 'Close' in ticker_data_history.columns else ('C' if 'C' in ticker_data_history.columns else None)
+        ticker_result['Dernier_Prix'] = None
+        ticker_result['Var_J1_Pct'] = None
+        if price_col is not None:
+            last_row = ticker_data_history[ticker_data_history['Datetime'] == latest_date]
+            prev_row = ticker_data_history[ticker_data_history['Datetime'] < latest_date].tail(1)
+            if not last_row.empty:
+                last_price = last_row[price_col].values[0]
+                ticker_result['Dernier_Prix'] = last_price
+                if not prev_row.empty:
+                    prev_price = prev_row[price_col].values[0]
+                    var_j1 = ((last_price / prev_price) - 1) * 100 if prev_price != 0 else None
+                    ticker_result['Var_J1_Pct'] = var_j1
 
         # --- Predict ---
         # Model expects input shape like (batch_size, time_steps, n_features)

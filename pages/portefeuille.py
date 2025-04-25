@@ -3,7 +3,9 @@ from dash import html, dcc, callback, Output, Input, State, ctx
 from dash import MATCH, ALL
 import plotly.express as px
 import pandas as pd
-from src.utils.data_process import get_data
+from src.utils.data_process import get_tickers
+import yfinance as yf
+
 def portefeuille_layout(portefolio):
     boutons = [
         html.Button(
@@ -74,27 +76,28 @@ def portefeuille_layout(portefolio):
     State({"type": "btn-portefeuille", "index": ALL}, "id")
 )
 def update_bloc_droit(n_clicks_list, ids):
-    # Trouver le bouton cliqué grâce à ctx
     triggered_id = ctx.triggered_id
-
     if not triggered_id:
         return html.P("Clique sur un bouton pour voir le contenu.")
-    
-    i = triggered_id["index"]  # C'est la valeur du bouton (ex: "Vue globale", etc.)
-
+    i = triggered_id["index"]
     try:
         df = pd.read_csv("Data/Tickers/csv/portefeuille.csv")
-        df=df[df['Ticker'] == i]
-        df=df[df["Price"]=='Close']
-        df=df.tail(30)
+        # Correction : si le fichier est au format wide, le transformer en long
+        if 'Price' not in df.columns and 'Open' in df.columns:
+            # On suppose format wide, on le melt
+            id_vars = ['Datetime', 'Ticker'] if 'Ticker' in df.columns else ['Datetime']
+            value_vars = [col for col in df.columns if col not in id_vars]
+            df = df.melt(id_vars=id_vars, value_vars=value_vars, var_name='Price', value_name='Value')
+        df = df[df['Ticker'] == i]
+        df = df[df["Price"] == 'Close']
+        df = df.tail(30)
         fig = px.line(df, x='Datetime', y='Value', title=f"{i}")
         return dcc.Graph(figure=fig)
     except Exception as e:
         return html.Div([
             html.H3(f"Erreur lors du chargement de {i}"),
             html.Pre(str(e))
-        
-    ])
+        ])
 
 FICHIER_TXT = "Data/Tickers/txt/portefeuille.txt"
 
@@ -108,23 +111,35 @@ FICHIER_TXT = "Data/Tickers/txt/portefeuille.txt"
 def modifier_txt(n_clicks_ajouter, n_clicks_supprimer, mot):
     if not mot or mot.strip() == "":
         return None
-
     mot = mot.strip()
     action = ctx.triggered_id
-
     try:
         with open(FICHIER_TXT, "r", encoding="utf-8") as f:
             mots = set(line.strip() for line in f if line.strip())
     except FileNotFoundError:
         mots = set()
-
     if action == "btn-ajouter":
         mots.add(mot)
     elif action == "btn-supprimer":
         mots.discard(mot)
-
     with open(FICHIER_TXT, "w", encoding="utf-8") as f:
         for m in sorted(mots):
             f.write(m + "\n")
-    get_data(FICHIER_TXT, "Data/Tickers/csv/portefeuille.csv", 729)
+    # Générer le csv au format long attendu (Ticker, Datetime, Price, Value)
+    tickers = list(mots)
+    if tickers:
+        start_date = pd.Timestamp.today() - pd.Timedelta(days=729)
+        end_date = pd.Timestamp.today()
+        data = yf.download(tickers, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'), group_by='ticker', auto_adjust=False)
+        if len(tickers) == 1:
+            # yfinance retourne un DataFrame simple pour un seul ticker
+            data.columns = pd.MultiIndex.from_product([tickers, data.columns])
+        data.index.name = 'Datetime'
+        data = data.stack(level=0).reset_index()
+        data = data.melt(id_vars=['Datetime', 'level_1'], var_name='Price', value_name='Value')
+        data.rename(columns={'level_1': 'Ticker'}, inplace=True)
+        data = data[['Datetime', 'Ticker', 'Price', 'Value']]
+        data.to_csv("Data/Tickers/csv/portefeuille.csv", index=False)
+    else:
+        pd.DataFrame(columns=['Datetime', 'Ticker', 'Price', 'Value']).to_csv("Data/Tickers/csv/portefeuille.csv", index=False)
     return ""

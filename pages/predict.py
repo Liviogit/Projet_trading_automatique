@@ -240,22 +240,30 @@ def generate_divs_from_df(df):
     for _, row in df.iterrows():
         pred = row.get('Prediction', None)
         conf = row.get('Confidence', None)
+        dernier_prix = row.get('Dernier_Prix', None)
+        var_j1 = row.get('Var_J1_Pct', None)
         if isinstance(pred, (int, float)) and pred in res:
             pred_str = res[pred]
         else:
             pred_str = str(pred)
-        # Afficher toujours le score pour LSTM (ou pour tout modèle si on généralise)
+        # Affichage : pour XGBoost (0 <= conf <= 1) en pourcentage, sinon score brut
         if conf is not None and pd.notnull(conf):
             try:
                 conf_val = float(conf)
-                conf_str = f" (Score: {conf_val:.4f})"
+                if 0 <= conf_val <= 1:
+                    conf_str = f" (Confiance: {conf_val*100:.2f}%)"
+                else:
+                    conf_str = f" (Score: {conf_val:.4f})"
             except Exception:
                 conf_str = f" (Score: {conf})"
         else:
             conf_str = ""
+        prix_str = f"Dernier Prix : {dernier_prix:.2f}" if dernier_prix is not None and pd.notnull(dernier_prix) else ""
+        var_str = f"Var. J-1 : {var_j1:+.2f}%" if var_j1 is not None and pd.notnull(var_j1) else ""
         divs.append(html.Div([
             html.P(f"Tickers : {row['Ticker']}"),
-            html.P(f"Prédiction : {pred_str}{conf_str}")
+            html.P(f"Prédiction : {pred_str}{conf_str}"),
+            html.P(prix_str + (" | " if prix_str and var_str else "") + var_str) if prix_str or var_str else None
         ], style={
             "padding": "10px",
             "marginBottom": "10px",
