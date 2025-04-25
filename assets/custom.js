@@ -1,42 +1,36 @@
-// Function to highlight the active navigation link
-document.addEventListener('DOMContentLoaded', function() {
-    // Function to update active link
-    function updateActiveLink() {
-        const currentPath = window.location.pathname;
-        
-        // Remove active class from all links
-        document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(link => {
-            link.classList.remove('active');
-        });
-        
-        // Add active class to current path links
-        document.querySelectorAll(`.nav-link[href="${currentPath}"], .mobile-nav-link[href="${currentPath}"]`).forEach(link => {
-            link.classList.add('active');
-        });
+// assets/custom.js
+document.addEventListener('DOMContentLoaded',function(){
+    // Active sidebar link
+    function updateActive(){
+        const p=window.location.pathname;
+        document.querySelectorAll('.sidebar-link').forEach(l=>l.classList.remove('active'));
+        document.querySelectorAll(`.sidebar-link[href="${p}"]`).forEach(l=>l.classList.add('active'));
     }
-    
-    // Initial call
-    updateActiveLink();
-    
-    // Set up a MutationObserver to detect URL changes
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'childList') {
-                updateActiveLink();
+    updateActive();
+    new MutationObserver(updateActive).observe(document.getElementById('page-content'),{childList:true});
+
+    // Tilt effect
+    function tiltMove(e){
+        if(window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+        const el=this.getBoundingClientRect(), x=e.clientX-el.left, y=e.clientY-el.top;
+        const rx=((y-el.height/2)/(el.height/2))*-4, ry=((x-el.width/2)/(el.width/2))*4;
+        this.style.transform=`perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    }
+    function tiltReset(){ this.style.transform='perspective(1000px) rotateX(0) rotateY(0)'; }
+    function initTilt(){
+        document.querySelectorAll('.tiltable').forEach(e=>{
+            if(!e.dataset.tilt){ e.dataset.tilt=1;
+                e.addEventListener('mousemove',tiltMove);
+                e.addEventListener('mouseleave',tiltReset);
             }
         });
-    });
-    
-    // Start observing the page-content div for changes
-    const targetNode = document.getElementById('page-content');
-    if (targetNode) {
-        observer.observe(targetNode, { childList: true });
     }
-    
-    // Close mobile menu when a link is clicked
-    document.querySelectorAll('.mobile-nav-link').forEach(link => {
-        link.addEventListener('click', function() {
-            document.getElementById('mobile-nav').style.display = 'none';
-        });
+    initTilt();
+    new MutationObserver(initTilt).observe(document.body,{childList:true,subtree:true});
+
+    // KPI pulse
+    document.querySelectorAll('.kpi-card').forEach(c=>{
+        c.classList.add('pulse');
+        c.addEventListener('animationend',()=>c.classList.remove('pulse'));
     });
 });

@@ -1,106 +1,104 @@
-from dash import html
-from dash import html, dcc, callback, Output, Input, State, ctx
-from dash import MATCH, ALL
+from dash import html, dcc, callback, Output, Input, State, ctx, ALL
 import plotly.express as px
 import pandas as pd
 from src.utils.data_process import get_tickers
-import yfinance as yf
 
-def portefeuille_layout(portefolio):
-    boutons = [
-        html.Button(
-            i,
-            id={"type": "btn-portefeuille", "index": i},
-            n_clicks=0,
-            style={"marginBottom": "10px", "width": "100%"}
-        )
-        for i in portefolio
-    ]
-    return html.Div([html.Div(
-            style={
-                "display": "flex",
-                "gap": "10px",
-                "margin": "20px 40px 0 40px"
-            },
-            children=[
-                dcc.Input(
-                    id="input-mot-cle",
-                    type="text",
-                    placeholder="Entrer un mot...",
-                    style={"width": "300px", "padding": "8px"}
-                ),
-                html.Button("Ajouter", id="btn-ajouter", n_clicks=0),
-                html.Button("Supprimer", id="btn-supprimer", n_clicks=0)
-            ]
-        ),
-        html.Div(
-        style={
-            "display": "flex",
-            "justifyContent": "space-between",  # Pour espacer les blocs de manière égale
-            "padding": "40px",
-            "minHeight": "100vh",
-            "backgroundColor": "#f9f9f9"
-        },
+# Layout principal pour la page Portefeuille
+
+def portefeuille_layout(portfolio):
+    return html.Div(
+        className="glass-card",
         children=[
+            html.H3("Mon Portefeuille", className="section-title font-jetbrains-mono"),
             html.Div(
-                style={
-                    "backgroundColor": "white",
-                    "padding": "30px",
-                    "boxShadow": "0 2px 8px rgba(0,0,0,0.1)",
-                    "borderRadius": "10px",
-                    "minWidth": "45%",  # Taille du bloc gauche
-                    "minHeight": "300px"
-                },
-                children=boutons
-            ),
-            html.Div(id='contenu-dynamique',
-                style={
-                    "backgroundColor": "white",
-                    "padding": "30px",
-                    "boxShadow": "0 2px 8px rgba(0,0,0,0.1)",
-                    "borderRadius": "10px",
-                    "minWidth": "45%",  # Taille du bloc droit
-                    "minHeight": "300px"
-                },
+                className="portfolio-main-content",
                 children=[
-                    html.H2("Bloc 2 : Détails ou graphiques avancés", style={"marginBottom": "20px"}),
-                    html.P("Ajoute ici un tableau de positions, un graphique d’évolution, ou toute autre info.")
+                    # Colonne de gauche: liste de tickers + formulaire
+                    html.Div(
+                        className="ticker-buttons-container",
+                        children=[
+                            html.Div(
+                                className="ticker-buttons",
+                                children=[
+                                    html.Button(
+                                        t,
+                                        id={"type": "btn-portefeuille", "index": t},
+                                        className="ticker-button tiltable btn btn-outline-light text-start mb-2"
+                                    ) for t in portfolio
+                                ]
+                            ),
+                            html.Div(
+                                className="add-ticker-form d-flex align-items-center mt-3",
+                                children=[
+                                    dcc.Input(
+                                        id="input-mot-cle",
+                                        type="text",
+                                        placeholder="Enter ticker...",
+                                        className="ticker-input form-control me-2"
+                                    ),
+                                    html.Button("Add", id="btn-ajouter", className="btn-add btn btn-success me-2"),
+                                    html.Button("Remove", id="btn-supprimer", className="btn-remove btn btn-danger")
+                                ]
+                            )
+                        ]
+                    ),
+                    # Colonne de droite: graphique du ticker sélectionné
+                    html.Div(
+                        className="price-chart-container",
+                        children=[
+                            html.H4(id="chart-title", className="font-jetbrains-mono mt-0 mb-3"),
+                            dcc.Graph(
+                                id="price-chart",
+                                className="price-chart",
+                                figure={}
+                            )
+                        ]
+                    )
                 ]
             )
         ]
-    )])
+    )
 
+# Callback: mise à jour du graphique en fonction du bouton cliqué
 @callback(
-    Output("contenu-dynamique", "children"),
+    Output("price-chart", "figure"),
+    Output("chart-title", "children"),
     Input({"type": "btn-portefeuille", "index": ALL}, "n_clicks"),
-    State({"type": "btn-portefeuille", "index": ALL}, "id")
+    State({"type": "btn-portefeuille", "index": ALL}, "id"),
+    prevent_initial_call=True
 )
-def update_bloc_droit(n_clicks_list, ids):
-    triggered_id = ctx.triggered_id
-    if not triggered_id:
-        return html.P("Clique sur un bouton pour voir le contenu.")
-    i = triggered_id["index"]
+def update_price_chart(n_clicks_list, ids_list):
+    triggered = ctx.triggered_id
+    if not triggered:
+        return {}, "Select a ticker"
+    ticker = triggered["index"]
+    # Lecture des données du portefeuille enregistrées
     try:
-        df = pd.read_csv("Data/Tickers/csv/portefeuille.csv")
-        # Correction : si le fichier est au format wide, le transformer en long
-        if 'Price' not in df.columns and 'Open' in df.columns:
-            # On suppose format wide, on le melt
-            id_vars = ['Datetime', 'Ticker'] if 'Ticker' in df.columns else ['Datetime']
-            value_vars = [col for col in df.columns if col not in id_vars]
-            df = df.melt(id_vars=id_vars, value_vars=value_vars, var_name='Price', value_name='Value')
-        df = df[df['Ticker'] == i]
-        df = df[df["Price"] == 'Close']
-        df = df.tail(30)
-        fig = px.line(df, x='Datetime', y='Value', title=f"{i}")
-        return dcc.Graph(figure=fig)
-    except Exception as e:
-        return html.Div([
-            html.H3(f"Erreur lors du chargement de {i}"),
-            html.Pre(str(e))
-        ])
+        df = pd.read_csv("Data/Tickers/csv/portefeuille.csv", parse_dates=["Datetime"])
+    except Exception:
+        return {}, f"No data file"
+    # Filtrage selon format
+    if "Price" in df.columns:
+        df_t = df[(df["Ticker"] == ticker) & (df["Price"] == "Close")]
+    else:
+        df_t = df[df["Ticker"] == ticker]
+    if df_t.empty:
+        return {}, f"No data for {ticker}"
+    df_t = df_t.sort_values("Datetime").tail(30)
+    # Choix de la colonne de prix
+    if "Value" in df_t.columns:
+        ycol = "Value"
+    elif "Close" in df_t.columns:
+        ycol = "Close"
+    elif "Adj Close" in df_t.columns:
+        ycol = "Adj Close"
+    else:
+        return {}, f"No price column for {ticker}"
+    fig = px.line(df_t, x="Datetime", y=ycol, title="")
+    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", margin=dict(l=20,r=20,t=20,b=20))
+    return fig, ticker
 
-FICHIER_TXT = "Data/Tickers/txt/portefeuille.txt"
-
+# Callback: ajout / suppression de tickers dans le portefeuille
 @callback(
     Output("input-mot-cle", "value", allow_duplicate=True),
     Input("btn-ajouter", "n_clicks"),
@@ -108,38 +106,18 @@ FICHIER_TXT = "Data/Tickers/txt/portefeuille.txt"
     State("input-mot-cle", "value"),
     prevent_initial_call=True
 )
-def modifier_txt(n_clicks_ajouter, n_clicks_supprimer, mot):
-    if not mot or mot.strip() == "":
-        return None
-    mot = mot.strip()
+def modify_portfolio(n_clicks_add, n_clicks_remove, value):
+    if not value or not value.strip():
+        return ""
     action = ctx.triggered_id
-    try:
-        with open(FICHIER_TXT, "r", encoding="utf-8") as f:
-            mots = set(line.strip() for line in f if line.strip())
-    except FileNotFoundError:
-        mots = set()
+    tickers = set(get_tickers())
+    ticker = value.strip().upper()
     if action == "btn-ajouter":
-        mots.add(mot)
+        tickers.add(ticker)
     elif action == "btn-supprimer":
-        mots.discard(mot)
-    with open(FICHIER_TXT, "w", encoding="utf-8") as f:
-        for m in sorted(mots):
-            f.write(m + "\n")
-    # Générer le csv au format long attendu (Ticker, Datetime, Price, Value)
-    tickers = list(mots)
-    if tickers:
-        start_date = pd.Timestamp.today() - pd.Timedelta(days=729)
-        end_date = pd.Timestamp.today()
-        data = yf.download(tickers, start=start_date.strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'), group_by='ticker', auto_adjust=False)
-        if len(tickers) == 1:
-            # yfinance retourne un DataFrame simple pour un seul ticker
-            data.columns = pd.MultiIndex.from_product([tickers, data.columns])
-        data.index.name = 'Datetime'
-        data = data.stack(level=0).reset_index()
-        data = data.melt(id_vars=['Datetime', 'level_1'], var_name='Price', value_name='Value')
-        data.rename(columns={'level_1': 'Ticker'}, inplace=True)
-        data = data[['Datetime', 'Ticker', 'Price', 'Value']]
-        data.to_csv("Data/Tickers/csv/portefeuille.csv", index=False)
-    else:
-        pd.DataFrame(columns=['Datetime', 'Ticker', 'Price', 'Value']).to_csv("Data/Tickers/csv/portefeuille.csv", index=False)
+        tickers.discard(ticker)
+    # Écriture dans le fichier
+    with open("Data/Tickers/txt/portefeuille.txt", "w", encoding="utf-8") as f:
+        for t in sorted(tickers):
+            f.write(t + "\n")
     return ""
