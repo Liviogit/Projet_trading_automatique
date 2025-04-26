@@ -4,7 +4,19 @@ import pandas as pd
 from src.utils.data_process import get_tickers
 
 # Layout principal pour la page Portefeuille
-
+def get_portfolio():
+    try:
+        with open("Data/Tickers/txt/portefeuille.txt", "r", encoding="utf-8") as f:
+            tickers = [line.strip() for line in f if line.strip()]
+        return tickers
+    except FileNotFoundError:
+        print("⚠️ portefeuille.txt not found.")
+        return []
+    except Exception as e:
+        print(f"Error reading portefeuille.txt: {e}")
+        return []
+    
+    
 def portefeuille_layout(portfolio):
     return html.Div(
         className="glass-card",
@@ -121,3 +133,4 @@ def modify_portfolio(n_clicks_add, n_clicks_remove, value):
         for t in sorted(tickers):
             f.write(t + "\n")
     return ""
+

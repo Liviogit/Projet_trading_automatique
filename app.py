@@ -5,6 +5,28 @@ import yfinance as yf
 from src.utils.data_process import get_portfolio
 from pages.portefeuille import portefeuille_layout
 from pages.predict import prediction_layout
+from src.utils.generate_recent import generate_recent_data
+
+
+
+
+
+
+# -----------Liste des tickers utilisés------------
+from src.utils.generate_recent import generate_recent_data
+
+tickers = [
+    "AC.PA", "ACA.PA", "AI.PA", "AIR.PA", "BN.PA", "BNP.PA",
+    "CA.PA", "CAP.PA", "CS.PA", "DG.PA", "DSY.PA", "EDEN.PA",
+    "EL.PA", "EN.PA", "ENGI.PA", "ERF.PA", "GLE.PA", "HO.PA",
+    "KER.PA", "LR.PA", "MC.PA", "ML.PA", "MT.AS", "OR.PA",
+    "ORA.PA", "PUB.PA", "RI.PA", "RMS.PA", "RNO.PA", "SAF.PA",
+    "SAN.PA", "SGO.PA", "STLAP.PA", "SU.PA", "TEP.PA", "TTE.PA",
+    "VIE.PA", "VIV.PA", "STMPA.PA", "URW.PA"
+]
+
+generate_recent_data("Data/Tickers/csv/recent.csv", tickers, days_interval=10)
+
 
 # -------------  Bootstrap / Theme -----------------
 app = Dash(
@@ -126,6 +148,9 @@ app.layout = html.Div([
     ], className="footer")
 ])
 
+
+
+
 # -------------  Callbacks -------------------------
 @callback(Output("page-content", "children"), Input("url", "pathname"))
 def display_page(path):
@@ -158,3 +183,4 @@ def toggle_palette(n, path, is_open):
 # -------------  Run ------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
+

@@ -4,6 +4,7 @@ from dash_iconify import DashIconify
 import pandas as pd
 from datetime import datetime
 from src.utils.prediction import get_prediction, get_lstm_prediction
+from src.utils.ppo_predict import get_ppo_prediction
 
 # --- Layout principal pour la page de prédiction ---
 def prediction_layout():
@@ -28,7 +29,8 @@ def prediction_layout():
                     id='model-choice',
                     options=[
                         {'label': 'XGBoost (General)', 'value': 'xgboost'},
-                        {'label': 'LSTM (Ticker-Specific)', 'value': 'lstm'}
+                        {'label': 'LSTM (Ticker-Specific)', 'value': 'lstm'},
+                        {'label': 'PPO (Reinforcement Learning)', 'value': 'ppo'} 
                     ],
                     value='xgboost',
                     inline=True,
@@ -98,6 +100,57 @@ def generate_prediction_cards(df):
         cards.append(dbc.Col(card, xs=12, sm=6, md=4, lg=3))
     return cards
 
+
+
+# --- Génération des cartes de prédiction pour PPO ---
+def generate_ppo_prediction_cards(df):
+    if df is None or df.empty:
+        return [dbc.Col(dbc.Alert("No PPO prediction data available.", color="warning"), width=12)]
+
+    cards = []
+    for _, row in df.iterrows():
+        ticker = row.get('Ticker', 'N/A')
+        decision = row.get('Decision', 'N/A')  # ✅ Correct : on utilise "Decision"
+        price = row.get('Close', None)          # ✅ Correct : on utilise "Close"
+        
+        # 🧠 Map the PPO action
+        if decision == "Buy":
+            pred_text = "Buy 📈"
+            pred_color = "text-gain"
+        elif decision == "Sell":
+            pred_text = "Sell 📉"
+            pred_color = "text-loss"
+        else:
+            pred_text = "Hold"
+            pred_color = "text-neutral"
+
+        # 👉 Write Decision inside the "Decision" field
+        conf_text = decision  # ✅ Maintenant conf_text affiche "Buy", "Sell", "Hold"
+
+        # 👉 Format Price
+        price_text = f"${price:.2f}" if pd.notnull(price) else "N/A"
+
+        # 👉 Change is not relevant (we can hide it or put N/A)
+        change_text = "N/A"
+        change_color = ""
+
+        card = dbc.Card(
+            className="prediction-card tiltable",
+            children=[
+                dbc.CardHeader(html.H5(ticker, className="font-jetbrains-mono mb-0")),
+                dbc.CardBody([
+                    html.P([html.Strong("Decision: "), html.Span(conf_text)], className="mb-2"),
+                    html.P([html.Strong("Action: "), html.Span(pred_text, className=pred_color)], className="mb-2"),
+                    html.P([html.Strong("Last Price: "), html.Span(price_text, className="font-jetbrains-mono")], className="mb-2"),
+                    # Change is optional
+                    # html.P([html.Strong("Change: "), html.Span(change_text, className=change_color)], className="mb-0")
+                ])
+            ]
+        )
+        cards.append(dbc.Col(card, xs=12, sm=6, md=4, lg=3))
+
+    return cards
+
 # --- Callback pour rafraîchir les résultats du portefeuille ---
 @callback(
     Output('prediction-output', 'children'),
@@ -109,19 +162,25 @@ def update_prediction_display(n_clicks, model_choice):
     path_txt = "Data/Tickers/txt/portefeuille.txt"
     path_xgb = "Data/Tickers/csv/portefeuille_xgb_temp.csv"
     path_lstm = "Data/Tickers/csv/portefeuille_lstm_temp.csv"
+    path_recent = "Data/Tickers/csv/recent.csv"
+
     if model_choice == 'xgboost':
         df, date_str = get_prediction(path_txt, path_xgb)
         model_name = "XGBoost"
+        cards = generate_prediction_cards(df)  # Use standard cards
+    elif model_choice == 'ppo':
+        df, date_str = get_ppo_prediction(path_recent)
+        model_name = "PPO (RL)"
+        cards = generate_ppo_prediction_cards(df)  # Use PPO cards (special function)
     else:
         df, date_str = get_lstm_prediction(path_txt, path_lstm, model_base_dir="model_results")
         model_name = "LSTM"
+        cards = generate_prediction_cards(df)  # Use standard cards
 
-    cards = generate_prediction_cards(df)
     return html.Div([
         html.H3(f"Predictions ({date_str}) via {model_name}", className="section-title font-jetbrains-mono mb-4"),
         dbc.Row(cards, className="g-3")
     ])
-
 # --- Callback pour la prédiction d'un seul ticker ---
 @callback(
     Output("resultat-prediction", "children"),
