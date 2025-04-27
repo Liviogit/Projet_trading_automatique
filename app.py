@@ -96,11 +96,14 @@ app.layout = html.Div([
     dcc.Location(id="url", refresh=False),
     command_palette,
 
-    html.Header([
-        html.H1("FinDash", className="brand-name font-jetbrains-mono me-4"),
-        create_ticker_tape(),
-        html.Button("⌘K", id="open-command-palette", className="command-palette-btn")
-    ], className="header"),
+    html.Header(
+        className="header",
+        children=[
+            html.H1("FinDash", className="brand-name font-jetbrains-mono me-4"),
+            create_ticker_tape(),
+            # Removed the command palette button
+        ]
+    ),
 
     html.Div([
         html.Aside([
@@ -150,10 +153,6 @@ def display_page(path):
 @callback(Output("sidebar", "className"), Input("sidebar-toggle", "n_clicks"), State("sidebar", "className"), prevent_initial_call=True)
 def toggle_sidebar(n, cls):
     return "sidebar collapsed" if "collapsed" not in cls else "sidebar"
-
-@callback(Output("command-palette-modal", "is_open"), Input("open-command-palette", "n_clicks"), Input("url", "pathname"), State("command-palette-modal", "is_open"), prevent_initial_call=True)
-def toggle_palette(n, path, is_open):
-    return False if callback_context.triggered_id == "url" else not is_open
 
 # -------------  Run ------------------------------
 if __name__ == "__main__":
