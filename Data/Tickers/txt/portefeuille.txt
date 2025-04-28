@@ -1,0 +1,6 @@
+AC.PA
+AI.PA
+AIR.PA
+BNP.PA
+CS.PA
+MT.AS

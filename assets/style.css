@@ -1,0 +1,48 @@
+/* assets/style.css */
+:root {
+  --canvas:#0B1015; --card-bg:rgba(19,25,32,0.6);
+  --gain:#00E676; --loss:#FF5252; --accent:#FBC02D;
+  --text-primary:#fff; --text-secondary:rgba(255,255,255,0.7);
+  --border-light:rgba(255,255,255,0.1);
+  --shadow-card:0 2px 8px rgba(0,0,0,0.6);
+  --spacing-sm:0.5rem; --spacing-md:1rem; --spacing-lg:1.5rem;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--canvas);color:var(--text-primary);overflow-x:hidden;}
+.font-jetbrains-mono{font-family:'JetBrains Mono',monospace;}
+.text-gain{color:var(--gain);} .text-loss{color:var(--loss);} .text-accent{color:var(--accent);}
+
+.matrix-background{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;
+  background:repeating-linear-gradient(0deg,transparent 0,transparent 10px,#0F1620 10px,#0F1620 12px);
+  background-size:100% 1024px; animation:matrix-scroll 25s linear infinite;}
+@keyframes matrix-scroll{0%{background-position-y:0;}100%{background-position-y:1024px;}}
+
+.header{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--spacing-md) var(--spacing-lg);background:rgba(19,25,32,0.8);
+  backdrop-filter:blur(6px);border-bottom:1px solid var(--border-light);position:sticky;top:0;z-index:100;}
+.brand{display:flex;align-items:center;gap:var(--spacing-md);} .logo{height:32px;}
+.ticker-tape{flex:1;overflow:hidden;height:40px;display:flex;align-items:center;}
+.ticker-list{display:inline-flex;white-space:nowrap;animation:ticker 18s linear infinite;}
+@keyframes ticker{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+.ticker-item{margin:0 var(--spacing-md);font-family:'JetBrains Mono',monospace;}
+.ticker-symbol{font-weight:700;margin-right:0.25rem;} .search-input{background:rgba(0,0,0,0.3);border:1px solid var(--border-light);color:#fff;border-radius:4px;padding:0.25rem 0.5rem;}
+.command-palette-btn{background:rgba(255,255,255,0.1);border:1px solid var(--border-light);color:var(--text-secondary);border-radius:4px;padding:0.25rem 0.5rem;cursor:pointer;font-family:'JetBrains Mono';}
+.command-palette-btn:hover{background:rgba(255,255,255,0.2);}
+
+.main-layout{display:flex;flex:1;}.sidebar{width:250px;background:rgba(19,25,32,0.8);backdrop-filter:blur(6px);border-right:1px solid var(--border-light);padding:var(--spacing-md);transition:width .3s;overflow-y:auto;}
+.sidebar.collapsed{width:60px;} .sidebar-toggle{background:none;border:none;color:var(--text-secondary);cursor:pointer;}
+.sidebar-heading{color:var(--text-secondary);margin-bottom:var(--spacing-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sidebar.collapsed .sidebar-heading{display:none;}
+.sidebar-links li{margin-bottom:0.5rem;} .sidebar-link{display:flex;align-items:center;padding:0.5rem 1rem;color:#fff;border-radius:4px;text-decoration:none;transition:background .2s;}
+.sidebar-link:hover{background:rgba(255,255,255,0.1);} .sidebar-link.active{background:rgba(0,230,118,0.2);color:var(--gain);}
+.sidebar.collapsed .nav-icon{margin-right:0;} .sidebar-section{margin-top:1.5rem;} .watchlist-btn{width:100%;padding:0.5rem 1rem;background:rgba(255,255,255,0.1);border:1px solid var(--border-light);color:#fff;border-radius:4px;text-align:left;cursor:pointer;transition:background .2s;}
+.watchlist-btn:hover{background:rgba(255,255,255,0.2);}
+
+.main-content{flex:1;padding:1.5rem;overflow-y:auto;}
+.page-header{margin-bottom:1.5rem;} .page-title{font-size:2rem;margin-bottom:0.5rem;} .page-description{color:var(--text-secondary);}
+
+.glass-card{background:rgba(19,25,32,0.6);backdrop-filter:blur(6px);border:1px solid var(--border-light);border-radius:8px;box-shadow:var(--shadow-card);padding:1.5rem;margin-bottom:1.5rem;}
+
+.error-container{text-align:center;padding:2rem;}
+.error-icon{color:var(--accent);} .error-title{font-size:2rem;margin-bottom:1rem;} .error-message{color:var(--text-secondary);margin-bottom:1.5rem;}
+.error-link{background:var(--accent);color:#000;padding:0.5rem 1rem;border-radius:4px;text-decoration:none;transition:background .2s;} .error-link:hover{background:rgba(251,192,45,0.8);}

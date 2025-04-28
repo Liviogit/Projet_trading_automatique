@@ -1,1 +1,5 @@
 .DS_Store
+test.py
+test.ipynb
+__pycache__
+tensor_trade
